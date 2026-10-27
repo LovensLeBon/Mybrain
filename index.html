@@ -6,94 +6,87 @@
   <title>MyBrain</title>
   <style>
     * { box-sizing: border-box; }
-    body {
-      font-family: Arial, sans-serif;
-      margin: 0;
-      background: #f5f5f5;
-    }
-    header {
-      background: #ffffff;
-      text-align: center;
-      padding: 16px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-    }
-    .logo {
-      font-size: 28px;
-      font-weight: bold;
-      color: #1a7f37;
-    }
+    body { font-family: Arial, sans-serif; margin: 0; background: #f5f5f5; }
+    header { background: #fff; text-align: center; padding: 16px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
+    .logo { font-size: 28px; font-weight: bold; color: #1a7f37; }
     .logo span { color: #333; }
-    .liste {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 16px;
-      padding: 16px;
-    }
-    .carte {
-      background: #fff;
-      border-radius: 12px;
-      overflow: hidden;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.12);
-    }
-    .photo {
-      width: 100%;
-      height: 160px;
-      background: #d9e8dd;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 48px;
-    }
-    .photo img {
-      width: 100%;
-      height: 160px;
-      object-fit: cover;
-    }
+    #deco { display: none; margin-top: 6px; font-size: 13px; color: #666; text-decoration: underline; cursor: pointer; }
+    .liste { display: grid; grid-template-columns: 1fr; gap: 16px; padding: 16px; }
+    .carte { background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.12); }
+    .photo { width: 100%; height: 160px; background: #d9e8dd; display: flex; align-items: center; justify-content: center; font-size: 48px; }
+    .photo img { width: 100%; height: 160px; object-fit: cover; }
     .infos { padding: 12px; }
     .nom { font-size: 18px; font-weight: bold; margin: 0 0 6px; }
     .categorie { font-size: 13px; color: #666; margin: 0 0 6px; }
     .prix { font-size: 17px; color: #1a7f37; font-weight: bold; margin: 0 0 12px; }
-    .btn-acheter {
-      width: 100%;
-      padding: 12px;
-      background: #1a7f37;
-      color: #fff;
-      font-size: 16px;
-      font-weight: bold;
-      border: none;
-      border-radius: 14px;
-      box-shadow: 0 5px 0 #0f5a25;
-      cursor: pointer;
+    .btn-acheter, .btn-principal {
+      width: 100%; padding: 12px; background: #1a7f37; color: #fff;
+      font-size: 16px; font-weight: bold; border: none; border-radius: 14px;
+      box-shadow: 0 5px 0 #0f5a25; cursor: pointer;
     }
-    .btn-acheter:active {
-      transform: translateY(4px);
-      box-shadow: 0 1px 0 #0f5a25;
-    }
+    .btn-acheter:active, .btn-principal:active { transform: translateY(4px); box-shadow: 0 1px 0 #0f5a25; }
+    #fond { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.55); align-items: center; justify-content: center; padding: 16px; z-index: 10; }
+    .boite { background: #fff; border-radius: 14px; padding: 20px; width: 100%; max-width: 380px; position: relative; }
+    .boite h2 { margin: 0 0 6px; color: #1a7f37; }
+    .boite p.sous { margin: 0 0 14px; color: #555; font-size: 14px; }
+    .boite input { width: 100%; padding: 12px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 8px; font-size: 16px; }
+    #erreur { color: #c62828; font-size: 14px; min-height: 18px; margin: 0 0 10px; }
+    #bascule { text-align: center; margin-top: 14px; font-size: 14px; color: #1a7f37; text-decoration: underline; cursor: pointer; }
+    #fermer { position: absolute; top: 8px; right: 14px; font-size: 24px; cursor: pointer; color: #888; }
+    #message { display: none; position: fixed; bottom: 20px; left: 16px; right: 16px; background: #1a7f37; color: #fff; padding: 14px; border-radius: 10px; text-align: center; z-index: 20; }
   </style>
 </head>
 <body>
 
   <header>
     <div class="logo">My<span>Brain</span></div>
+    <div id="deco">Se déconnecter</div>
   </header>
 
   <div class="liste" id="liste"></div>
 
+  <div id="fond">
+    <div class="boite">
+      <span id="fermer">&times;</span>
+      <h2 id="titre"></h2>
+      <p class="sous" id="sous"></p>
+      <input type="email" id="email" placeholder="Adresse e-mail">
+      <input type="password" id="mdp" placeholder="Mot de passe (6 caractères minimum)">
+      <p id="erreur"></p>
+      <button class="btn-principal" id="valider"></button>
+      <div id="bascule"></div>
+    </div>
+  </div>
+
+  <div id="message"></div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+
   <script>
-    // Pwodui egzanp yo. Nou pral ranplase yo pita.
+    var firebaseConfig = {
+      apiKey: "AIzaSyAohyvle5aqT4oQ0UIkDAXI6KEntpGvCRU",
+      authDomain: "mybrain-fdbe8.firebaseapp.com",
+      projectId: "mybrain-fdbe8",
+      storageBucket: "mybrain-fdbe8.firebasestorage.app",
+      messagingSenderId: "543483595565",
+      appId: "1:543483595565:web:e658c935919b8f238f61a4"
+    };
+    firebase.initializeApp(firebaseConfig);
+    var auth = firebase.auth();
+
     var produits = [
       { nom: "Guide PDF Débutant", prix: "500 HTG", categorie: "PDF", photo: "" },
       { nom: "Cours de Prompt Engineering", prix: "1500 HTG", categorie: "Cours", photo: "" },
       { nom: "Pack Modèles CV", prix: "300 HTG", categorie: "PDF", photo: "" }
     ];
 
+    var produitChoisi = null;
+    var mode = "inscription";
+
     var liste = document.getElementById("liste");
-
-    produits.forEach(function (p) {
-      var photoHtml = p.photo
-        ? '<img src="' + p.photo + '" alt="' + p.nom + '">'
-        : "📚";
-
+    produits.forEach(function (p, i) {
+      var photoHtml = p.photo ? '<img src="' + p.photo + '" alt="' + p.nom + '">' : "📚";
       liste.innerHTML +=
         '<div class="carte">' +
           '<div class="photo">' + photoHtml + '</div>' +
@@ -101,10 +94,107 @@
             '<p class="nom">' + p.nom + '</p>' +
             '<p class="categorie">' + p.categorie + '</p>' +
             '<p class="prix">' + p.prix + '</p>' +
-            '<button class="btn-acheter">Acheter</button>' +
+            '<button class="btn-acheter" data-i="' + i + '">Acheter</button>' +
           '</div>' +
         '</div>';
     });
+
+    liste.addEventListener("click", function (e) {
+      if (e.target.classList.contains("btn-acheter")) {
+        produitChoisi = produits[e.target.getAttribute("data-i")];
+        if (auth.currentUser) {
+          montrerMessage("Produit choisi : " + produitChoisi.nom);
+        } else {
+          mode = "inscription";
+          ouvrirFenetre();
+        }
+      }
+    });
+
+    function ouvrirFenetre() {
+      document.getElementById("erreur").textContent = "";
+      if (mode === "inscription") {
+        document.getElementById("titre").textContent = "Créer un compte";
+        document.getElementById("sous").textContent = "Créez un compte pour protéger votre achat";
+        document.getElementById("valider").textContent = "Créer mon compte";
+        document.getElementById("bascule").textContent = "Déjà un compte ? Se connecter";
+      } else {
+        document.getElementById("titre").textContent = "Se connecter";
+        document.getElementById("sous").textContent = "Entrez vos informations";
+        document.getElementById("valider").textContent = "Se connecter";
+        document.getElementById("bascule").textContent = "Pas de compte ? Créer un compte";
+      }
+      document.getElementById("fond").style.display = "flex";
+    }
+
+    function fermerFenetre() {
+      document.getElementById("fond").style.display = "none";
+    }
+
+    document.getElementById("fermer").onclick = fermerFenetre;
+
+    document.getElementById("bascule").onclick = function () {
+      mode = (mode === "inscription") ? "connexion" : "inscription";
+      ouvrirFenetre();
+    };
+
+    function montrerMessage(texte) {
+      var m = document.getElementById("message");
+      m.textContent = texte;
+      m.style.display = "block";
+      setTimeout(function () { m.style.display = "none"; }, 3500);
+    }
+
+    function texteErreur(code) {
+      if (code === "auth/email-already-in-use") return "Cet e-mail est déjà utilisé.";
+      if (code === "auth/weak-password") return "Mot de passe trop court (6 caractères minimum).";
+      if (code === "auth/invalid-email") return "Adresse e-mail invalide.";
+      if (code === "auth/network-request-failed") return "Pas de connexion internet.";
+      if (code === "auth/invalid-credential" || code === "auth/wrong-password" || code === "auth/user-not-found") return "E-mail ou mot de passe incorrect.";
+      return "Une erreur est survenue. Réessayez.";
+    }
+
+    document.getElementById("valider").onclick = function () {
+      var email = document.getElementById("email").value.trim();
+      var mdp = document.getElementById("mdp").value;
+      var erreur = document.getElementById("erreur");
+      var bouton = document.getElementById("valider");
+
+      if (!navigator.onLine) { erreur.textContent = "Pas de connexion internet."; return; }
+      if (!email || mdp.length < 6) {
+        erreur.textContent = "Entrez un e-mail et un mot de passe de 6 caractères minimum.";
+        return;
+      }
+
+      erreur.textContent = "";
+      bouton.disabled = true;
+      bouton.textContent = "Chargement...";
+
+      var action = (mode === "inscription")
+        ? auth.createUserWithEmailAndPassword(email, mdp)
+        : auth.signInWithEmailAndPassword(email, mdp);
+
+      action.then(function () {
+        fermerFenetre();
+        document.getElementById("email").value = "";
+        document.getElementById("mdp").value = "";
+        if (produitChoisi) montrerMessage("Connecté. Produit choisi : " + produitChoisi.nom);
+        else montrerMessage("Connecté.");
+      }).catch(function (e) {
+        erreur.textContent = texteErreur(e.code);
+      }).then(function () {
+        bouton.disabled = false;
+        bouton.textContent = (mode === "inscription") ? "Créer mon compte" : "Se connecter";
+      });
+    };
+
+    auth.onAuthStateChanged(function (user) {
+      document.getElementById("deco").style.display = user ? "block" : "none";
+    });
+
+    document.getElementById("deco").onclick = function () {
+      auth.signOut();
+    };
   </script>
 
 </body>
