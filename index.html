@@ -30,6 +30,18 @@
     .boite h2 { margin: 0 0 6px; color: #1a7f37; }
     .boite p.sous { margin: 0 0 14px; color: #555; font-size: 14px; }
     .boite input { width: 100%; padding: 12px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 8px; font-size: 16px; }
+    .champ { position: relative; margin-bottom: 10px; }
+    .champ input { margin-bottom: 0; padding-right: 48px; }
+    .champ input.rouge { border: 2px solid #c62828; background: #fdecea; }
+    .oeil { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; font-size: 22px; line-height: 1; padding: 6px; cursor: pointer; }
+    @keyframes souke {
+      0%, 100% { transform: translateX(0); }
+      20% { transform: translateX(-8px); }
+      40% { transform: translateX(8px); }
+      60% { transform: translateX(-8px); }
+      80% { transform: translateX(8px); }
+    }
+    .souke { animation: souke 0.4s; }
     #erreur { color: #c62828; font-size: 14px; min-height: 18px; margin: 0 0 10px; }
     #bascule { text-align: center; margin-top: 14px; font-size: 14px; color: #1a7f37; text-decoration: underline; cursor: pointer; }
     #fermer { position: absolute; top: 8px; right: 14px; font-size: 24px; cursor: pointer; color: #888; }
@@ -51,7 +63,16 @@
       <h2 id="titre"></h2>
       <p class="sous" id="sous"></p>
       <input type="email" id="email" placeholder="Adresse e-mail">
-      <input type="password" id="mdp" placeholder="Mot de passe (6 caractères minimum)">
+
+      <div class="champ" id="champ1">
+        <input type="password" id="mdp" placeholder="Mot de passe (6 caractères minimum)">
+        <button type="button" class="oeil" id="oeil">👁️</button>
+      </div>
+
+      <div class="champ" id="champ2">
+        <input type="password" id="mdp2" placeholder="Confirmer le mot de passe">
+      </div>
+
       <p id="erreur"></p>
       <button class="btn-principal" id="valider"></button>
       <div id="bascule"></div>
@@ -113,16 +134,21 @@
 
     function ouvrirFenetre() {
       document.getElementById("erreur").textContent = "";
+      document.getElementById("mdp2").classList.remove("rouge");
+      document.getElementById("mdp").type = "password";
+      document.getElementById("oeil").textContent = "👁️";
       if (mode === "inscription") {
         document.getElementById("titre").textContent = "Créer un compte";
         document.getElementById("sous").textContent = "Créez un compte pour protéger votre achat";
         document.getElementById("valider").textContent = "Créer mon compte";
         document.getElementById("bascule").textContent = "Déjà un compte ? Se connecter";
+        document.getElementById("champ2").style.display = "block";
       } else {
         document.getElementById("titre").textContent = "Se connecter";
         document.getElementById("sous").textContent = "Entrez vos informations";
         document.getElementById("valider").textContent = "Se connecter";
         document.getElementById("bascule").textContent = "Pas de compte ? Créer un compte";
+        document.getElementById("champ2").style.display = "none";
       }
       document.getElementById("fond").style.display = "flex";
     }
@@ -137,6 +163,24 @@
       mode = (mode === "inscription") ? "connexion" : "inscription";
       ouvrirFenetre();
     };
+
+    document.getElementById("oeil").onclick = function () {
+      var champ = document.getElementById("mdp");
+      if (champ.type === "password") {
+        champ.type = "text";
+        this.textContent = "🙈";
+      } else {
+        champ.type = "password";
+        this.textContent = "👁️";
+      }
+    };
+
+    function effacerRouge() {
+      document.getElementById("mdp2").classList.remove("rouge");
+      document.getElementById("erreur").textContent = "";
+    }
+    document.getElementById("mdp").addEventListener("input", effacerRouge);
+    document.getElementById("mdp2").addEventListener("input", effacerRouge);
 
     function montrerMessage(texte) {
       var m = document.getElementById("message");
@@ -157,12 +201,23 @@
     document.getElementById("valider").onclick = function () {
       var email = document.getElementById("email").value.trim();
       var mdp = document.getElementById("mdp").value;
+      var mdp2 = document.getElementById("mdp2").value;
       var erreur = document.getElementById("erreur");
       var bouton = document.getElementById("valider");
 
       if (!navigator.onLine) { erreur.textContent = "Pas de connexion internet."; return; }
       if (!email || mdp.length < 6) {
         erreur.textContent = "Entrez un e-mail et un mot de passe de 6 caractères minimum.";
+        return;
+      }
+
+      if (mode === "inscription" && mdp !== mdp2) {
+        erreur.textContent = "Les mots de passe sont différents. Assurez-vous que les deux mots de passe sont identiques.";
+        var champ1 = document.getElementById("champ1");
+        champ1.classList.remove("souke");
+        void champ1.offsetWidth;
+        champ1.classList.add("souke");
+        document.getElementById("mdp2").classList.add("rouge");
         return;
       }
 
@@ -178,6 +233,7 @@
         fermerFenetre();
         document.getElementById("email").value = "";
         document.getElementById("mdp").value = "";
+        document.getElementById("mdp2").value = "";
         if (produitChoisi) montrerMessage("Connecté. Produit choisi : " + produitChoisi.nom);
         else montrerMessage("Connecté.");
       }).catch(function (e) {
