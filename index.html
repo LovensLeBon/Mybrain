@@ -279,8 +279,8 @@
       document.getElementById("dwa").textContent = WA_AFFICHE;
 
       var email = auth.currentUser ? auth.currentUser.email : "";
-      var texte = "Bonjou, mwen fèk peye " + produitChoisi.prix +
-        " pou \"" + produitChoisi.nom + "\" ak " + m.nom + ". Men prèv peman an." +
+      var texte = "Bonjou, mwen vle peye " + produitChoisi.prix +
+        " pou \"" + produitChoisi.nom + "\" ak " + m.nom + ". èske nap ka voye l pa WhatsApp pou mwen." +
         (email ? " Imèl kont mwen: " + email : "");
       document.getElementById("lien-wa").href = "https://wa.me/" + WA_NUMERO + "?text=" + encodeURIComponent(texte);
 
