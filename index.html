@@ -46,6 +46,32 @@
     #bascule { text-align: center; margin-top: 14px; font-size: 14px; color: #1a7f37; text-decoration: underline; cursor: pointer; }
     #fermer { position: absolute; top: 8px; right: 14px; font-size: 24px; cursor: pointer; color: #888; }
     #message { display: none; position: fixed; bottom: 20px; left: 16px; right: 16px; background: #1a7f37; color: #fff; padding: 14px; border-radius: 10px; text-align: center; z-index: 20; }
+
+    #feuille { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 15; align-items: flex-end; justify-content: center; }
+    .feuille-boite {
+      background: #fff; width: 100%; max-width: 480px; max-height: 92vh; overflow-y: auto;
+      border-radius: 20px 20px 0 0; padding: 22px 20px 26px; position: relative;
+      transform: translateY(100%); transition: transform 0.3s ease;
+    }
+    #feuille.ouvert .feuille-boite { transform: translateY(0); }
+    .feuille-boite h2 { margin: 0 0 6px; color: #1a7f37; font-size: 22px; }
+    .feuille-boite p.sous { margin: 0 0 20px; color: #555; font-size: 14px; }
+    #pfermer { position: absolute; top: 10px; right: 16px; font-size: 28px; cursor: pointer; color: #888; line-height: 1; }
+    .btn-moncash, .btn-natcash {
+      display: block; width: 100%; padding: 16px; margin-bottom: 18px;
+      color: #fff; font-size: 18px; font-weight: bold; border: none; border-radius: 16px; cursor: pointer;
+    }
+    .btn-moncash { background: #d32f2f; box-shadow: 0 6px 0 #8e1c1c; }
+    .btn-natcash { background: #0d2f6e; box-shadow: 0 6px 0 #071b40; }
+    .btn-moncash:active { transform: translateY(5px); box-shadow: 0 1px 0 #8e1c1c; }
+    .btn-natcash:active { transform: translateY(5px); box-shadow: 0 1px 0 #071b40; }
+    #retour { color: #1a7f37; text-decoration: underline; cursor: pointer; font-size: 14px; margin-bottom: 10px; }
+    .montant { background: #eaf5ee; border-radius: 10px; padding: 10px 14px; margin: 10px 0 16px; display: flex; justify-content: space-between; align-items: center; font-size: 14px; color: #333; }
+    .montant b { font-size: 19px; color: #1a7f37; }
+    .etapes { padding-left: 20px; margin: 0 0 20px; }
+    .etapes li { margin-bottom: 14px; line-height: 1.6; font-size: 15px; color: #333; }
+    .kopye { display: inline-block; margin-left: 4px; padding: 4px 10px; font-size: 12px; border: 1px solid #1a7f37; background: #fff; color: #1a7f37; border-radius: 8px; cursor: pointer; }
+    .lien-wa { display: block; text-align: center; text-decoration: none; }
   </style>
 </head>
 <body>
@@ -79,6 +105,32 @@
     </div>
   </div>
 
+  <div id="feuille">
+    <div class="feuille-boite">
+      <span id="pfermer">&times;</span>
+
+      <div id="vue-choix">
+        <h2>Chwazi yon mwayen paiement</h2>
+        <p class="sous" id="pnom"></p>
+        <button type="button" class="btn-moncash" id="btn-moncash">MonCash</button>
+        <button type="button" class="btn-natcash" id="btn-natcash">Natcash</button>
+      </div>
+
+      <div id="vue-detail" style="display:none">
+        <div id="retour">&larr; Retounen</div>
+        <h2 id="dtitre"></h2>
+        <div class="montant"><span>Montan pou voye</span><b id="dmontant"></b></div>
+        <ol class="etapes">
+          <li>Voye <b id="dmontant2"></b> sou nimewo <b id="dnumero"></b> <button type="button" class="kopye" id="kopye">Kopye nimewo</button></li>
+          <li>Non kont lan: <b id="dcompte"></b></li>
+          <li>Pran yon foto (screenshot) ki montre tranzaksyon an fèt</li>
+          <li>Voye foto a sou WhatsApp <b id="dwa"></b></li>
+        </ol>
+        <a class="btn-principal lien-wa" id="lien-wa" target="_blank" rel="noopener">Voye prèv la sou WhatsApp</a>
+      </div>
+    </div>
+  </div>
+
   <div id="message"></div>
 
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -102,7 +154,15 @@
       { nom: "Pack Modèles CV", prix: "300 HTG", categorie: "PDF", photo: "" }
     ];
 
+    var WA_NUMERO = "50935646494";
+    var WA_AFFICHE = "+509 35 64 6494";
+    var moyens = {
+      moncash: { nom: "MonCash", numero: "+509 37 65 0486", local: "37650486", compte: "SANON Lovensky" },
+      natcash: { nom: "Natcash", numero: "+509 35 64 6494", local: "35646494", compte: "DANON Lovensky" }
+    };
+
     var produitChoisi = null;
+    var moyenChoisi = null;
     var mode = "inscription";
 
     var liste = document.getElementById("liste");
@@ -124,7 +184,7 @@
       if (e.target.classList.contains("btn-acheter")) {
         produitChoisi = produits[e.target.getAttribute("data-i")];
         if (auth.currentUser) {
-          montrerMessage("Produit choisi : " + produitChoisi.nom);
+          ouvrirPaiement();
         } else {
           mode = "inscription";
           ouvrirFenetre();
@@ -189,6 +249,81 @@
       setTimeout(function () { m.style.display = "none"; }, 3500);
     }
 
+    function montrerVue(v) {
+      document.getElementById("vue-choix").style.display = (v === "choix") ? "block" : "none";
+      document.getElementById("vue-detail").style.display = (v === "detail") ? "block" : "none";
+    }
+
+    function ouvrirPaiement() {
+      document.getElementById("pnom").textContent = produitChoisi.nom + " · " + produitChoisi.prix;
+      montrerVue("choix");
+      var f = document.getElementById("feuille");
+      f.style.display = "flex";
+      setTimeout(function () { f.classList.add("ouvert"); }, 20);
+    }
+
+    function fermerPaiement() {
+      var f = document.getElementById("feuille");
+      f.classList.remove("ouvert");
+      setTimeout(function () { f.style.display = "none"; }, 300);
+    }
+
+    function montrerDetail(cle) {
+      var m = moyens[cle];
+      moyenChoisi = m;
+      document.getElementById("dtitre").textContent = "Peye ak " + m.nom;
+      document.getElementById("dmontant").textContent = produitChoisi.prix;
+      document.getElementById("dmontant2").textContent = produitChoisi.prix;
+      document.getElementById("dnumero").textContent = m.numero;
+      document.getElementById("dcompte").textContent = m.compte;
+      document.getElementById("dwa").textContent = WA_AFFICHE;
+
+      var email = auth.currentUser ? auth.currentUser.email : "";
+      var texte = "Bonjou, mwen fèk peye " + produitChoisi.prix +
+        " pou \"" + produitChoisi.nom + "\" ak " + m.nom + ". Men prèv peman an." +
+        (email ? " Imèl kont mwen: " + email : "");
+      document.getElementById("lien-wa").href = "https://wa.me/" + WA_NUMERO + "?text=" + encodeURIComponent(texte);
+
+      document.getElementById("kopye").textContent = "Kopye nimewo";
+      montrerVue("detail");
+    }
+
+    function copierAncien(texte) {
+      var t = document.createElement("textarea");
+      t.value = texte;
+      document.body.appendChild(t);
+      t.select();
+      try { document.execCommand("copy"); } catch (e) {}
+      document.body.removeChild(t);
+    }
+
+    document.getElementById("btn-moncash").onclick = function () { montrerDetail("moncash"); };
+    document.getElementById("btn-natcash").onclick = function () { montrerDetail("natcash"); };
+    document.getElementById("retour").onclick = function () { montrerVue("choix"); };
+    document.getElementById("pfermer").onclick = fermerPaiement;
+
+    document.getElementById("feuille").addEventListener("click", function (e) {
+      if (e.target === this) fermerPaiement();
+    });
+
+    document.getElementById("kopye").onclick = function () {
+      var bouton = this;
+      var numero = moyenChoisi.local;
+      var fini = function () {
+        bouton.textContent = "Kopye";
+        setTimeout(function () { bouton.textContent = "Kopye nimewo"; }, 1500);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(numero).then(fini).catch(function () {
+          copierAncien(numero);
+          fini();
+        });
+      } else {
+        copierAncien(numero);
+        fini();
+      }
+    };
+
     function texteErreur(code) {
       if (code === "auth/email-already-in-use") return "Cet e-mail est déjà utilisé.";
       if (code === "auth/weak-password") return "Mot de passe trop court (6 caractères minimum).";
@@ -234,7 +369,7 @@
         document.getElementById("email").value = "";
         document.getElementById("mdp").value = "";
         document.getElementById("mdp2").value = "";
-        if (produitChoisi) montrerMessage("Connecté. Produit choisi : " + produitChoisi.nom);
+        if (produitChoisi) ouvrirPaiement();
         else montrerMessage("Connecté.");
       }).catch(function (e) {
         erreur.textContent = texteErreur(e.code);
