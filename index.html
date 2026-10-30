@@ -12,6 +12,7 @@
     .logo span { color: #333; }
     #deco { display: none; margin-top: 6px; font-size: 13px; color: #666; text-decoration: underline; cursor: pointer; }
     .liste { display: grid; grid-template-columns: 1fr; gap: 16px; padding: 16px; }
+    #vide { text-align: center; color: #666; padding: 30px 16px; margin: 0; }
     .carte { background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.12); }
     .photo { width: 100%; height: 160px; background: #d9e8dd; display: flex; align-items: center; justify-content: center; font-size: 48px; }
     .photo img { width: 100%; height: 160px; object-fit: cover; }
@@ -25,6 +26,7 @@
       box-shadow: 0 5px 0 #0f5a25; cursor: pointer;
     }
     .btn-acheter:active, .btn-principal:active { transform: translateY(4px); box-shadow: 0 1px 0 #0f5a25; }
+    .btn-principal:disabled { opacity: 0.6; }
     #fond { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.55); align-items: center; justify-content: center; padding: 16px; z-index: 10; }
     .boite { background: #fff; border-radius: 14px; padding: 20px; width: 100%; max-width: 380px; position: relative; }
     .boite h2 { margin: 0 0 6px; color: #1a7f37; }
@@ -73,6 +75,7 @@
     .etapes li { margin-bottom: 14px; line-height: 1.6; font-size: 15px; color: #333; }
     .kopye { display: inline-block; margin-left: 4px; padding: 4px 10px; font-size: 12px; border: 1px solid #1a7f37; background: #fff; color: #1a7f37; border-radius: 8px; cursor: pointer; }
     .lien-wa { display: block; text-align: center; text-decoration: none; }
+    .aide { margin: 22px 0 10px; font-size: 14px; color: #555; text-align: center; }
   </style>
 </head>
 <body>
@@ -131,6 +134,8 @@
           <li>Voye foto a sou WhatsApp <b id="dwa"></b></li>
         </ol>
         <a class="btn-principal lien-wa" id="lien-wa" target="_blank" rel="noopener">Voye prèv la sou WhatsApp</a>
+        <p class="aide">Lè w fin voye prèv la, klike bouton sa a:</p>
+        <button type="button" class="btn-principal" id="btn-paye">J'ai payé</button>
       </div>
     </div>
   </div>
@@ -139,6 +144,7 @@
 
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
   <script>
     var firebaseConfig = {
@@ -151,12 +157,7 @@
     };
     firebase.initializeApp(firebaseConfig);
     var auth = firebase.auth();
-
-    var produits = [
-      { nom: "Guide PDF Débutant", prix: "500 HTG", categorie: "PDF", photo: "" },
-      { nom: "Cours de Prompt Engineering", prix: "1500 HTG", categorie: "Cours", photo: "" },
-      { nom: "Pack Modèles CV", prix: "300 HTG", categorie: "PDF", photo: "" }
-    ];
+    var db = firebase.firestore();
 
     var WA_NUMERO = "50935646494";
     var WA_AFFICHE = "+509 35 64 6494";
@@ -165,36 +166,106 @@
       natcash: { nom: "Natcash", numero: "+509 35 64 6494", local: "35646494", compte: "DANON Lovensky" }
     };
 
+    var produits = [];
     var produitChoisi = null;
     var moyenChoisi = null;
+    var moyenCle = null;
     var mode = "inscription";
 
     var liste = document.getElementById("liste");
-    produits.forEach(function (p, i) {
-      var photoHtml = p.photo ? '<img src="' + p.photo + '" alt="' + p.nom + '">' : "📚";
-      liste.innerHTML +=
-        '<div class="carte">' +
-          '<div class="photo">' + photoHtml + '</div>' +
-          '<div class="infos">' +
-            '<p class="nom">' + p.nom + '</p>' +
-            '<p class="categorie">' + p.categorie + '</p>' +
-            '<p class="prix">' + p.prix + '</p>' +
-            '<button class="btn-acheter" data-i="' + i + '">Acheter</button>' +
-          '</div>' +
-        '</div>';
-    });
 
-    liste.addEventListener("click", function (e) {
-      if (e.target.classList.contains("btn-acheter")) {
-        produitChoisi = produits[e.target.getAttribute("data-i")];
-        if (auth.currentUser) {
-          ouvrirPaiement();
-        } else {
-          mode = "inscription";
-          ouvrirFenetre();
-        }
+    function prixTexte(n) { return n + " HTG"; }
+
+    function messageListe(texte) {
+      liste.textContent = "";
+      var p = document.createElement("p");
+      p.id = "vide";
+      p.textContent = texte;
+      liste.appendChild(p);
+    }
+
+    function afficherProduits() {
+      if (!produits.length) {
+        messageListe("Aucun produit disponible pour le moment.");
+        return;
       }
-    });
+      liste.textContent = "";
+      produits.forEach(function (p) {
+        var carte = document.createElement("div");
+        carte.className = "carte";
+
+        var photo = document.createElement("div");
+        photo.className = "photo";
+        if (p.photo && p.photo.indexOf("https://") === 0) {
+          var img = document.createElement("img");
+          img.src = p.photo;
+          img.alt = p.nom;
+          photo.appendChild(img);
+        } else {
+          photo.textContent = "📚";
+        }
+
+        var infos = document.createElement("div");
+        infos.className = "infos";
+
+        var nom = document.createElement("p");
+        nom.className = "nom";
+        nom.textContent = p.nom;
+
+        var cat = document.createElement("p");
+        cat.className = "categorie";
+        cat.textContent = p.categorie;
+
+        var prix = document.createElement("p");
+        prix.className = "prix";
+        prix.textContent = prixTexte(p.prix);
+
+        var bouton = document.createElement("button");
+        bouton.className = "btn-acheter";
+        bouton.type = "button";
+        bouton.textContent = "Acheter";
+        bouton.onclick = function () {
+          produitChoisi = p;
+          if (auth.currentUser) {
+            ouvrirPaiement();
+          } else {
+            mode = "inscription";
+            ouvrirFenetre();
+          }
+        };
+
+        infos.appendChild(nom);
+        infos.appendChild(cat);
+        infos.appendChild(prix);
+        infos.appendChild(bouton);
+        carte.appendChild(photo);
+        carte.appendChild(infos);
+        liste.appendChild(carte);
+      });
+    }
+
+    function chargerProduits() {
+      messageListe("Chargement des produits...");
+      db.collection("produits").get().then(function (snap) {
+        produits = [];
+        snap.forEach(function (doc) {
+          var d = doc.data();
+          if (typeof d.nom === "string" && typeof d.prix === "number") {
+            produits.push({
+              id: doc.id,
+              nom: d.nom,
+              prix: d.prix,
+              categorie: typeof d.categorie === "string" ? d.categorie : "",
+              photo: typeof d.photo === "string" ? d.photo : ""
+            });
+          }
+        });
+        afficherProduits();
+      }).catch(function () {
+        messageListe("Impossible de charger les produits. Vérifiez votre connexion et réessayez.");
+      });
+    }
+    chargerProduits();
 
     function ouvrirFenetre() {
       document.getElementById("erreur").textContent = "";
@@ -284,7 +355,7 @@
     }
 
     function ouvrirPaiement() {
-      document.getElementById("pnom").textContent = produitChoisi.nom + " · " + produitChoisi.prix;
+      document.getElementById("pnom").textContent = produitChoisi.nom + " · " + prixTexte(produitChoisi.prix);
       montrerVue("choix");
       var f = document.getElementById("feuille");
       f.style.display = "flex";
@@ -300,20 +371,25 @@
     function montrerDetail(cle) {
       var m = moyens[cle];
       moyenChoisi = m;
+      moyenCle = cle;
+      var prix = prixTexte(produitChoisi.prix);
       document.getElementById("dtitre").textContent = "Peye ak " + m.nom;
-      document.getElementById("dmontant").textContent = produitChoisi.prix;
-      document.getElementById("dmontant2").textContent = produitChoisi.prix;
+      document.getElementById("dmontant").textContent = prix;
+      document.getElementById("dmontant2").textContent = prix;
       document.getElementById("dnumero").textContent = m.numero;
       document.getElementById("dcompte").textContent = m.compte;
       document.getElementById("dwa").textContent = WA_AFFICHE;
 
       var email = auth.currentUser ? auth.currentUser.email : "";
-      var texte = "Bonjou, mwen fèk peye " + produitChoisi.prix +
+      var texte = "Bonjou, mwen fèk peye " + prix +
         " pou \"" + produitChoisi.nom + "\" ak " + m.nom + ". Men prèv peman an." +
         (email ? " Imèl kont mwen: " + email : "");
       document.getElementById("lien-wa").href = "https://wa.me/" + WA_NUMERO + "?text=" + encodeURIComponent(texte);
 
       document.getElementById("kopye").textContent = "Kopye nimewo";
+      var bp = document.getElementById("btn-paye");
+      bp.disabled = false;
+      bp.textContent = "J'ai payé";
       montrerVue("detail");
     }
 
@@ -351,6 +427,32 @@
         copierAncien(numero);
         fini();
       }
+    };
+
+    document.getElementById("btn-paye").onclick = function () {
+      var bouton = this;
+      var u = auth.currentUser;
+      if (!u || !produitChoisi || !moyenCle) return;
+      if (!navigator.onLine) { montrerMessage("Pas de connexion internet."); return; }
+
+      bouton.disabled = true;
+      bouton.textContent = "Chargement...";
+
+      db.collection("achats").add({
+        uid: u.uid,
+        produitId: produitChoisi.id,
+        moyen: moyenCle,
+        statut: "En attente",
+        email: u.email,
+        creeLe: firebase.firestore.FieldValue.serverTimestamp()
+      }).then(function () {
+        fermerPaiement();
+        montrerMessage("Demann ou voye. Ou pral resevwa aksè lè paiement lan verifye. Gade nan Mes achats.", 6000);
+      }).catch(function () {
+        bouton.disabled = false;
+        bouton.textContent = "J'ai payé";
+        montrerMessage("Erè: demann nan pa voye. Eseye ankò.");
+      });
     };
 
     function texteErreur(code) {
@@ -419,4 +521,4 @@
   </script>
 
 </body>
-  </html>
+</html>
