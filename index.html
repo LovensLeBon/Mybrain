@@ -34,6 +34,7 @@
     .champ input { margin-bottom: 0; padding-right: 48px; }
     .champ input.rouge { border: 2px solid #c62828; background: #fdecea; }
     .oeil { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; font-size: 22px; line-height: 1; padding: 6px; cursor: pointer; }
+    #oublie { display: none; text-align: right; font-size: 13px; color: #1a7f37; text-decoration: underline; cursor: pointer; margin: 0 0 12px; }
     @keyframes souke {
       0%, 100% { transform: translateX(0); }
       20% { transform: translateX(-8px); }
@@ -97,7 +98,10 @@
 
       <div class="champ" id="champ2">
         <input type="password" id="mdp2" placeholder="Confirmer le mot de passe">
+        <button type="button" class="oeil" id="oeil2">👁️</button>
       </div>
+
+      <div id="oublie">Mot de passe oublié ?</div>
 
       <p id="erreur"></p>
       <button class="btn-principal" id="valider"></button>
@@ -196,19 +200,23 @@
       document.getElementById("erreur").textContent = "";
       document.getElementById("mdp2").classList.remove("rouge");
       document.getElementById("mdp").type = "password";
+      document.getElementById("mdp2").type = "password";
       document.getElementById("oeil").textContent = "👁️";
+      document.getElementById("oeil2").textContent = "👁️";
       if (mode === "inscription") {
         document.getElementById("titre").textContent = "Créer un compte";
         document.getElementById("sous").textContent = "Créez un compte pour protéger votre achat";
         document.getElementById("valider").textContent = "Créer mon compte";
         document.getElementById("bascule").textContent = "Déjà un compte ? Se connecter";
         document.getElementById("champ2").style.display = "block";
+        document.getElementById("oublie").style.display = "none";
       } else {
         document.getElementById("titre").textContent = "Se connecter";
         document.getElementById("sous").textContent = "Entrez vos informations";
         document.getElementById("valider").textContent = "Se connecter";
         document.getElementById("bascule").textContent = "Pas de compte ? Créer un compte";
         document.getElementById("champ2").style.display = "none";
+        document.getElementById("oublie").style.display = "block";
       }
       document.getElementById("fond").style.display = "flex";
     }
@@ -224,16 +232,19 @@
       ouvrirFenetre();
     };
 
-    document.getElementById("oeil").onclick = function () {
-      var champ = document.getElementById("mdp");
+    function basculerOeil(idChamp, idBouton) {
+      var champ = document.getElementById(idChamp);
+      var bouton = document.getElementById(idBouton);
       if (champ.type === "password") {
         champ.type = "text";
-        this.textContent = "🙈";
+        bouton.textContent = "🙈";
       } else {
         champ.type = "password";
-        this.textContent = "👁️";
+        bouton.textContent = "👁️";
       }
-    };
+    }
+    document.getElementById("oeil").onclick = function () { basculerOeil("mdp", "oeil"); };
+    document.getElementById("oeil2").onclick = function () { basculerOeil("mdp2", "oeil2"); };
 
     function effacerRouge() {
       document.getElementById("mdp2").classList.remove("rouge");
@@ -242,12 +253,30 @@
     document.getElementById("mdp").addEventListener("input", effacerRouge);
     document.getElementById("mdp2").addEventListener("input", effacerRouge);
 
-    function montrerMessage(texte) {
+    function montrerMessage(texte, duree) {
       var m = document.getElementById("message");
       m.textContent = texte;
       m.style.display = "block";
-      setTimeout(function () { m.style.display = "none"; }, 3500);
+      setTimeout(function () { m.style.display = "none"; }, duree || 3500);
     }
+
+    document.getElementById("oublie").onclick = function () {
+      var email = document.getElementById("email").value.trim();
+      var erreur = document.getElementById("erreur");
+
+      if (!navigator.onLine) { erreur.textContent = "Pas de connexion internet."; return; }
+      if (!email) {
+        erreur.textContent = "Entrez d'abord votre adresse e-mail ci-dessus.";
+        return;
+      }
+
+      erreur.textContent = "";
+      auth.sendPasswordResetEmail(email).then(function () {
+        montrerMessage("Si cet e-mail a un compte, un lien de réinitialisation vient d'être envoyé. Vérifiez aussi vos spams.", 6000);
+      }).catch(function (e) {
+        erreur.textContent = texteErreur(e.code);
+      });
+    };
 
     function montrerVue(v) {
       document.getElementById("vue-choix").style.display = (v === "choix") ? "block" : "none";
@@ -279,8 +308,8 @@
       document.getElementById("dwa").textContent = WA_AFFICHE;
 
       var email = auth.currentUser ? auth.currentUser.email : "";
-      var texte = "Bonjou, mwen vle peye " + produitChoisi.prix +
-        " pou \"" + produitChoisi.nom + "\" ak " + m.nom + ". èske nap ka voye l pa WhatsApp pou mwen." +
+      var texte = "Bonjou, mwen fèk peye " + produitChoisi.prix +
+        " pou \"" + produitChoisi.nom + "\" ak " + m.nom + ". Men prèv peman an." +
         (email ? " Imèl kont mwen: " + email : "");
       document.getElementById("lien-wa").href = "https://wa.me/" + WA_NUMERO + "?text=" + encodeURIComponent(texte);
 
@@ -329,6 +358,7 @@
       if (code === "auth/weak-password") return "Mot de passe trop court (6 caractères minimum).";
       if (code === "auth/invalid-email") return "Adresse e-mail invalide.";
       if (code === "auth/network-request-failed") return "Pas de connexion internet.";
+      if (code === "auth/too-many-requests") return "Trop de tentatives. Réessayez plus tard.";
       if (code === "auth/invalid-credential" || code === "auth/wrong-password" || code === "auth/user-not-found") return "E-mail ou mot de passe incorrect.";
       return "Une erreur est survenue. Réessayez.";
     }
@@ -389,4 +419,4 @@
   </script>
 
 </body>
-</html>
+  </html>
