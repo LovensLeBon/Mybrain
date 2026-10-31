@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="ht">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MyBrain Admin</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; margin: 0; background: #f0f2f5; color: #222; }
+    header { background: #1a7f37; color: #fff; padding: 14px 16px; display: flex; justify-content: space-between; align-items: center; }
+    header h1 { margin: 0; font-size: 18px; }
+    #sortir { display: none; background: none; border: 1px solid #fff; color: #fff; border-radius: 8px; padding: 6px 10px; font-size: 13px; }
+    .page { max-width: 560px; margin: 0 auto; padding: 14px; }
+    .bwat { background: #fff; border-radius: 12px; padding: 14px; margin-bottom: 14px; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+    .bwat h2 { margin: 0 0 12px; font-size: 18px; color: #1a7f37; }
+    label { font-size: 13px; color: #555; font-weight: bold; }
+    input, textarea { width: 100%; padding: 12px; margin: 4px 0 12px; border: 1px solid #ccc; border-radius: 8px; font-size: 16px; font-family: inherit; }
+    textarea { min-height: 110px; resize: vertical; }
+    .btn { padding: 12px 16px; border: none; border-radius: 10px; font-size: 15px; font-weight: bold; color: #fff; background: #1a7f37; cursor: pointer; }
+    .btn.gri { background: #777; }
+    .btn.wouj { background: #c62828; }
+    .btn.plen { width: 100%; }
+    .btn:disabled { opacity: 0.6; }
+    .rang { display: flex; gap: 8px; }
+    .rang .btn { flex: 1; }
+    .miniatures { display: flex; gap: 10px; flex-wrap: wrap; margin: 6px 0 12px; }
+    .mini { position: relative; width: 90px; height: 90px; }
+    .mini img { width: 90px; height: 90px; object-fit: cover; border-radius: 8px; }
+    .mini button { position: absolute; top: -6px; right: -6px; width: 26px; height: 26px; border-radius: 50%; border: none; background: #c62828; color: #fff; font-size: 15px; line-height: 1; }
+    .pwodui { display: flex; gap: 12px; align-items: center; }
+    .pwodui .vin { width: 72px; height: 72px; border-radius: 8px; background: #d9e8dd; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 28px; overflow: hidden; }
+    .pwodui .vin img { width: 72px; height: 72px; object-fit: cover; }
+    .pwodui .info { flex: 1; min-width: 0; }
+    .pwodui .nom { font-weight: bold; margin: 0 0 4px; word-wrap: break-word; }
+    .pwodui .prix { color: #1a7f37; font-weight: bold; margin: 0; }
+    .pwodui .acts { display: flex; flex-direction: column; gap: 6px; }
+    .pwodui .acts .btn { padding: 8px 12px; font-size: 13px; }
+    .vid { text-align: center; color: #666; padding: 16px; }
+    .erreur { color: #c62828; font-size: 14px; min-height: 18px; margin: 0 0 10px; }
+    #msg { display: none; position: fixed; bottom: 20px; left: 16px; right: 16px; background: #1a7f37; color: #fff; padding: 14px; border-radius: 10px; text-align: center; z-index: 50; }
+    #msg.er { background: #c62828; }
+    .kache { display: none; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>MyBrain · Admin</h1>
+    <button id="sortir" type="button">Soti</button>
+  </header>
+
+  <div class="page">
+
+    <div id="vue-login" class="bwat kache">
+      <h2>Koneksyon admin</h2>
+      <label for="l-email">Imèl</label>
+      <input type="email" id="l-email" placeholder="Imèl admin lan">
+      <label for="l-mdp">Modpas</label>
+      <input type="password" id="l-mdp" placeholder="Modpas">
+      <p class="erreur" id="l-erreur"></p>
+      <button class="btn plen" id="l-ok" type="button">Konekte</button>
+    </div>
+
+    <div id="vue-refus" class="bwat kache">
+      <h2>Accès refusé</h2>
+      <p>Kont sa a pa gen dwa administratè.</p>
+    </div>
+
+    <div id="vue-admin" class="kache">
+
+      <div class="bwat">
+        <button class="btn plen" id="nouvo" type="button">+ Nouvo pwodui</button>
+      </div>
+
+      <div class="bwat kache" id="fom">
+        <h2 id="fom-titre">Nouvo pwodui</h2>
+
+        <label for="f-nom">Non pwodui a</label>
+        <input type="text" id="f-nom" maxlength="120" placeholder="Egzanp: Gid fabrikasyon savon">
+
+        <label for="f-prix">Pri (HTG)</label>
+        <input type="number" id="f-prix" inputmode="numeric" min="1" step="1" placeholder="Egzanp: 500">
+
+        <label for="f-cat">Kategori</label>
+        <input type="text" id="f-cat" maxlength="40" placeholder="Egzanp: PDF">
+
+        <label for="f-desc">Deskripsyon (eksplike kijan l mache)</label>
+        <textarea id="f-desc" maxlength="2000" placeholder="Eksplike sa pwodui a ye ak kijan l mache"></textarea>
+
+        <label>Foto (1 a 3)</label>
+        <div class="miniatures" id="miniatures"></div>
+        <input type="file" id="f-fichye" accept="image/*" multiple class="kache">
+        <button class="btn gri plen" id="choisir" type="button">Chwazi foto nan telefòn</button>
+        <p style="margin:6px 0 12px;font-size:12px;color:#666">Foto yo ap ti-ti otomatikman pou sit la rapid.</p>
+
+        <p class="erreur" id="f-erreur"></p>
+        <div class="rang">
+          <button class="btn gri" id="anile" type="button">Anile</button>
+          <button class="btn" id="sove" type="button">Sove</button>
+        </div>
+      </div>
+
+      <div class="bwat">
+        <h2>Pwodui yo</h2>
+        <div id="lis"></div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <div id="msg"></div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+  <script>
+    var ADMIN_UID = "e7aT8WAdY1hJlEgLwMR8NZAnGku2";
+    var MAX_FOTO = 3;
+
+    firebase.initializeApp({
+      apiKey: "AIzaSyAohyvle5aqT4oQ0UIkDAXI6KEntpGvCRU",
+      authDomain: "mybrain-fdbe8.firebaseapp.com",
+      projectId: "mybrain-fdbe8",
+      storageBucket: "mybrain-fdbe8.firebasestorage.app",
+      messagingSenderId: "543483595565",
+      appId: "1:543483595565:web:e658c935919b8f238f61a4"
+    });
+    var auth = firebase.auth();
+    var db = firebase.firestore();
+
+    var fotos = [];
+    var idEdit = null;
+
+    function $(id) { return document.getElementById(id); }
+
+    function msg(texte, erreur) {
+      var m = $("msg");
+      m.textContent = texte;
+      m.className = erreur ? "er" : "";
+      m.style.display = "block";
+      setTimeout(function () { m.style.display = "none"; }, 3500);
+    }
+
+    function srcOk(s) {
+      return typeof s === "string" && (s.indexOf("data:image/") === 0 || s.indexOf("https://") === 0);
+    }
+
+    function montrer(v) {
+      $("vue-login").classList.toggle("kache", v !== "login");
+      $("vue-refus").classList.toggle("kache", v !== "refus");
+      $("vue-admin").classList.toggle("kache", v !== "admin");
+      $("sortir").style.display = (v === "login") ? "none" : "block";
+    }
+
+    auth.onAuthStateChanged(function (u) {
+      if (!u) { montrer("login"); return; }
+      if (u.uid !== ADMIN_UID) { montrer("refus"); return; }
+      montrer("admin");
+      charger();
+    });
+
+    $("l-ok").onclick = function () {
+      var email = $("l-email").value.trim();
+      var mdp = $("l-mdp").value;
+      var er = $("l-erreur");
+      er.textContent = "";
+      if (!email || !mdp) { er.textContent = "Antre imèl ak modpas."; return; }
+      var b = this;
+      b.disabled = true;
+      auth.signInWithEmailAndPassword(email, mdp).catch(function () {
+        er.textContent = "Imèl oswa modpas pa kòrèk.";
+      }).then(function () { b.disabled = false; });
+    };
+
+    $("sortir").onclick = function () { auth.signOut(); };
+
+    function ouvriFom(p) {
+      idEdit = p ? p.id : null;
+      $("fom-titre").textContent = p ? "Modifye pwodui" : "Nouvo pwodui";
+      $("f-nom").value = p ? p.nom : "";
+      $("f-prix").value = p ? p.prix : "";
+      $("f-cat").value = p ? p.categorie : "";
+      $("f-desc").value = p ? p.description : "";
+      fotos = p ? p.photos.slice() : [];
+      $("f-erreur").textContent = "";
+      dessinerMini();
+      $("fom").classList.remove("kache");
+      $("fom").scrollIntoView({ behavior: "smooth" });
+    }
+
+    function fermeFom() {
+      $("fom").classList.add("kache");
+      idEdit = null;
+      fotos = [];
+    }
+
+    $("nouvo").onclick = function () { ouvriFom(null); };
+    $("anile").onclick = fermeFom;
+
+    function dessinerMini() {
+      var zon = $("miniatures");
+      zon.textContent = "";
+      fotos.forEach(function (f, i) {
+        var d = document.createElement("div");
+        d.className = "mini";
+        var im = document.createElement("img");
+        if (srcOk(f)) im.src = f;
+        var x = document.createElement("button");
+        x.type = "button";
+        x.textContent = "×";
+        x.onclick = function () { fotos.splice(i, 1); dessinerMini(); };
+        d.appendChild(im);
+        d.appendChild(x);
+        zon.appendChild(d);
+      });
+      $("choisir").style.display = (fotos.length >= MAX_FOTO) ? "none" : "block";
+    }
+
+    $("choisir").onclick = function () { $("f-fichye").click(); };
+
+    function compresser(fichye) {
+      return new Promise(function (res, rej) {
+        var r = new FileReader();
+        r.onerror = rej;
+        r.onload = function () {
+          var img = new Image();
+          img.onerror = rej;
+          img.onload = function () {
+            var max = 700;
+            var w = img.width;
+            var h = img.height;
+            if (w > max || h > max) {
+              var k = Math.min(max / w, max / h);
+              w = Math.round(w * k);
+              h = Math.round(h * k);
+            }
+            var c = document.createElement("canvas");
+            c.width = w;
+            c.height = h;
+            c.getContext("2d").drawImage(img, 0, 0, w, h);
+            res(c.toDataURL("image/jpeg", 0.65));
+          };
+          img.src = r.result;
+        };
+        r.readAsDataURL(fichye);
+      });
+    }
+
+    $("f-fichye").onchange = function () {
+      var lis = Array.prototype.slice.call(this.files);
+      var inp = this;
+      var place = MAX_FOTO - fotos.length;
+      lis = lis.slice(0, place);
+      if (!lis.length) return;
+      $("f-erreur").textContent = "Ap prepare foto yo...";
+      var chen = Promise.resolve();
+      lis.forEach(function (f) {
+        chen = chen.then(function () {
+          return compresser(f).then(function (d) { fotos.push(d); });
+        });
+      });
+      chen.then(function () {
+        $("f-erreur").textContent = "";
+        dessinerMini();
+      }).catch(function () {
+        $("f-erreur").textContent = "Yon foto pa ka li. Eseye yon lòt.";
+        dessinerMini();
+      }).then(function () { inp.value = ""; });
+    };
+
+    $("sove").onclick = function () {
+      var nom = $("f-nom").value.trim();
+      var prix = parseInt($("f-prix").value, 10);
+      var cat = $("f-cat").value.trim();
+      var desc = $("f-desc").value.trim();
+      var er = $("f-erreur");
+      er.textContent = "";
+
+      if (nom.length < 2) { er.textContent = "Antre non pwodui a."; return; }
+      if (isNaN(prix) || prix < 1) { er.textContent = "Antre yon pri an HTG (nonb antye)."; return; }
+      if (fotos.join("").length > 850000) { er.textContent = "Foto yo twò gwo. Retire youn."; return; }
+      if (!navigator.onLine) { er.textContent = "Pa gen koneksyon entènèt."; return; }
+
+      var done = {
+        nom: nom,
+        prix: prix,
+        categorie: cat,
+        description: desc,
+        photos: fotos
+      };
+
+      var b = this;
+      b.disabled = true;
+      b.textContent = "Ap sove...";
+
+      var kont;
+      if (idEdit) {
+        kont = db.collection("produits").doc(idEdit).update(done);
+      } else {
+        done.creeLe = firebase.firestore.FieldValue.serverTimestamp();
+        kont = db.collection("produits").add(done);
+      }
+
+      kont.then(function () {
+        msg("Pwodui a sove.");
+        fermeFom();
+        charger();
+      }).catch(function () {
+        er.textContent = "Erè: pwodui a pa sove. Eseye ankò.";
+      }).then(function () {
+        b.disabled = false;
+        b.textContent = "Sove";
+      });
+    };
+
+    function charger() {
+      var lis = $("lis");
+      lis.textContent = "Chajman...";
+      db.collection("produits").get().then(function (snap) {
+        var tab = [];
+        snap.forEach(function (doc) {
+          var d = doc.data();
+          tab.push({
+            id: doc.id,
+            nom: typeof d.nom === "string" ? d.nom : "",
+            prix: typeof d.prix === "number" ? d.prix : 0,
+            categorie: typeof d.categorie === "string" ? d.categorie : "",
+            description: typeof d.description === "string" ? d.description : "",
+            photos: Array.isArray(d.photos) ? d.photos.filter(srcOk) : [],
+            t: d.creeLe && d.creeLe.toMillis ? d.creeLe.toMillis() : 0
+          });
+        });
+        tab.sort(function (a, b) { return b.t - a.t; });
+        lis.textContent = "";
+        if (!tab.length) {
+          var v = document.createElement("p");
+          v.className = "vid";
+          v.textContent = "Poko gen pwodui. Klike + Nouvo pwodui.";
+          lis.appendChild(v);
+          return;
+        }
+        tab.forEach(function (p) { lis.appendChild(ligne(p)); });
+      }).catch(function () {
+        lis.textContent = "Pa ka chaje pwodui yo.";
+      });
+    }
+
+    function ligne(p) {
+      var w = document.createElement("div");
+      w.className = "pwodui";
+      w.style.marginBottom = "14px";
+
+      var vin = document.createElement("div");
+      vin.className = "vin";
+      if (p.photos.length) {
+        var im = document.createElement("img");
+        im.src = p.photos[0];
+        vin.appendChild(im);
+      } else {
+        vin.textContent = "📚";
+      }
+
+      var info = document.createElement("div");
+      info.className = "info";
+      var nom = document.createElement("p");
+      nom.className = "nom";
+      nom.textContent = p.nom;
+      var prix = document.createElement("p");
+      prix.className = "prix";
+      prix.textContent = p.prix + " HTG";
+      info.appendChild(nom);
+      info.appendChild(prix);
+
+      var acts = document.createElement("div");
+      acts.className = "acts";
+      var mod = document.createElement("button");
+      mod.type = "button";
+      mod.className = "btn";
+      mod.textContent = "Modifye";
+      mod.onclick = function () { ouvriFom(p); };
+      var sup = document.createElement("button");
+      sup.type = "button";
+      sup.className = "btn wouj";
+      sup.textContent = "Efase";
+      sup.onclick = function () {
+        if (!confirm("Efase \"" + p.nom + "\" ?")) return;
+        db.collection("produits").doc(p.id).delete().then(function () {
+          msg("Pwodui a efase.");
+          charger();
+        }).catch(function () { msg("Erè: pa ka efase.", true); });
+      };
+      acts.appendChild(mod);
+      acts.appendChild(sup);
+
+      w.appendChild(vin);
+      w.appendChild(info);
+      w.appendChild(acts);
+      return w;
+    }
+  </script>
+
+</body>
+</html>
